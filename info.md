@@ -71,8 +71,8 @@ Yp地址
        - 没有币对先创建 
          - PairCreated
        - 把base币对转到pair
-       - 充值0.1个weth到swap合约
-       - swap合约把0.1个weth充值到币对
+       - 充值0.1个weth到msg.sender
+       - msg.sender把0.1个weth充值到币对
        - mintfee
        - mint
          - 先lock,转到0地址最小流动性MINIMUM_LIQUIDITY
@@ -80,3 +80,51 @@ Yp地址
        - update reverse
        - 记录Mint日志
        - 剩余的eth转回去
+2. 添加流动性
+    - 参数
+        #	Name	Type	Data
+        0	token	address	cb968f770dac20e38557f1a6cbbb0285b81e3583
+        1	amountTokenDesired	uint256	1000000000000000000000
+        2	amountTokenMin	uint256	995000000000000000000
+        3	amountETHMin	uint256	9950000000000000
+        4	to	address	a6efe7c7397a81acb47006a1963e2b4bc5ee0f1f
+        5	deadline	uint256	1599830105
+
+    - 充值token 、WETH
+    - 计算可以换多少
+    - 计算流动性
+      - Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+    - mint
+3. 取消流动性
+    - #	Name	Type	Data
+    - removeLiquidityETHWithPermit
+        0	token	address	cb968f770dac20e38557f1a6cbbb0285b81e3583
+        1	liquidity	uint256	3478505426185217165
+
+        2	amountTokenMin	uint256	1094499999999999968535
+        3	amountETHMin	uint256	10944999999999999
+
+        4	to	address	a6efe7c7397a81acb47006a1963e2b4bc5ee0f1f
+        5	deadline	uint256	1599832552
+
+        6	approveMax	bool	false
+
+
+        7	v	uint8	28
+        8	r	bytes32	b401dc0ec4f29af2fb665854c6c12e55b893c544a6e62e23c2e2c8466fd5b094
+        9	s	bytes32	770e3d5215a96aaeb0a7a29e58ab1f69c8d01a8948b8ac5943c3825d5c0655df
+
+    - 过程
+      - sender approve uniswap花pair币
+      - 从sender发送liquidity个pair到pair合约
+      - pair合约销毁pair币
+      - 从pair发送token到swap
+      - 从pair合约发送WETH到swap
+      - sync reserve
+      - emit SYNC
+      - 从swap发送token到msg.sender
+      - 提现WETH到swap
+      - swap合约发送eth到sender
+
+
+4. swap

@@ -250,12 +250,12 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
 
     // **** ADD LIQUIDITY ****
     function _addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin
+        address tokenA,  //yp
+        address tokenB,  // Weth
+        uint amountADesired, //yp amount
+        uint amountBDesired, // msg.value 
+        uint amountAMin, //滑点后
+        uint amountBMin  //滑点后
     ) internal virtual returns (uint amountA, uint amountB) {
         // create the pair if it doesn't exist yet
         //创建币对
@@ -270,12 +270,15 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
 
         } else {
             uint amountBOptimal = UniswapV2Library.quote(amountADesired, reserveA, reserveB);
+            //计算出来的weth数量小于发送的eth数量
             if (amountBOptimal <= amountBDesired) {
                 require(amountBOptimal >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
                 (amountA, amountB) = (amountADesired, amountBOptimal);
-            } else {
+            } else {  //大于。
                 uint amountAOptimal = UniswapV2Library.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
+
+
                 require(amountAOptimal >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
@@ -301,6 +304,13 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
 
         liquidity = IUniswapV2Pair(pair).mint(to);
     }
+
+        // 0	token	address	cb968f770dac20e38557f1a6cbbb0285b81e3583
+        // 1	amountTokenDesired	uint256	1000000000000000000000
+        // 2	amountTokenMin	uint256	995000000000000000000
+        // 3	amountETHMin	uint256	9950000000000000
+        // 4	to	address	a6efe7c7397a81acb47006a1963e2b4bc5ee0f1f
+        // 5	deadline	uint256	1599830105
     function addLiquidityETH(
         address token,
         uint amountTokenDesired,
@@ -323,9 +333,11 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
          //把yp从合约调用者账户转到币对，转了100000
 
         TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
-        //充值0.1个weth到swap合约
+        
+        //充值0.1个weth到msg.sender
         IWETH(WETH).deposit{value: amountETH}();
-        //swap合约把0.1个weth充值到币对
+
+        //msg.sender把0.1个weth充值到币对
         assert(IWETH(WETH).transfer(pair, amountETH));
 
         //添加流动性
@@ -345,8 +357,11 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
         uint deadline
     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
         address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
-        IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+        // send liquidity to pair
+        IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity); 
+        // burn
         (uint amount0, uint amount1) = IUniswapV2Pair(pair).burn(to);
+
         (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
         require(amountA >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
@@ -399,7 +414,9 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
     ) external virtual override returns (uint amountToken, uint amountETH) {
         address pair = UniswapV2Library.pairFor(factory, token, WETH);
         uint value = approveMax ? uint(-1) : liquidity;
+        //允许合约使用币
         IUniswapV2Pair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+
         (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
     }
 
